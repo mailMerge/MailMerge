@@ -55,12 +55,12 @@ def addresscheck(df):
             if addressstring.find('University at Buffalo') != -1:
                 buffadd.loc[len(buffadd)]=df.iloc[index]
             else:
-                usaddd.loc[len(usadd)]= df.iloc(index)
+                usaddd.loc[len(usadd)]= df.iloc[index]
         else:
             if addressstring.find("University at Buffalo") != -1:
-                wrongbuff.loc[len(wrongbuff)] = df.iloc(index)
+                wrongbuff.loc[len(wrongbuff)] = df.iloc[index]
             else:
-                wrongaddress.loc[len(wrongaddress)] = df.iloc(index)
+                wrongaddress.loc[len(wrongaddress)] = df.iloc[index]
 
 
 
