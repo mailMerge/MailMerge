@@ -36,7 +36,7 @@ Tk.mainloop()
 ls = ('First Name','Last Name','Fullname','Title','Company','Department','Address 1','Address 2','City','State','Zipcode','Country')
 
 buffadd = pd.DataFrame(columns=ls)
-usaddd = pd.DataFrame(columns=ls)
+usadd = pd.DataFrame(columns=ls)
 wrongaddress = pd.DataFrame(columns=ls)
 wrongbuff = pd.DataFrame(columns=ls)
 
@@ -55,7 +55,7 @@ def addresscheck(df):
             if addressstring.find('University at Buffalo') != -1:
                 buffadd.loc[len(buffadd)]=df.iloc[index]
             else:
-                usaddd.loc[len(usadd)]= df.iloc[index]
+                usadd.loc[len(usadd)]= df.iloc[index]
         else:
             if addressstring.find("University at Buffalo") != -1:
                 wrongbuff.loc[len(wrongbuff)] = df.iloc[index]
