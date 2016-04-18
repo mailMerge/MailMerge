@@ -5,12 +5,22 @@ import os
 import json
 from fuzzywuzzy import fuzz
 from fuzzywuzzy import process 
+import probablepeople 
 from argparse import ArgumentParser
 from gooey import Gooey, GooeyParser
 
 
+## --- setup dataframes
+ls = ('First Name','Last Name','Fullname','Title','Company','Department','Address 1','Address 2','City','State','Zipcode','Country')
+buffadd = pd.DataFrame(columns=ls)
+usadd = pd.DataFrame(columns=ls)
+wrongaddress = pd.DataFrame(columns=ls)
+wrongbuff = pd.DataFrame(columns=ls)
+output_df = {'buffaloAddress.xlsx':buffadd,'usAddress.xlsx':usadd,'wrongAddress.xlsx':wrongaddress,'wrongBuffaloAddress.xlsx':wrongbuff}
+
 @Gooey(program_name="Mail Merge")
-def parse_args():
+def parse_args(progress_regex=r"^progress: (\d+)%$",
+       disable_stop_button=True):
     """ Use GooeyParser to build up the arguments we will use in our script
     Save the arguments in a default json file so that we can retrieve them
     every time we run the script.
@@ -38,9 +48,9 @@ def parse_args():
                         default=stored_args.get('output_directory'),
                         help="Output directory to save merged files")
 
-    parser.add_argument("FileSaver", help="Name the output file you want to process", widget="FileSaver")
-    parser.add_argument("-o", "--overwrite", action="store_true", help="Overwrite output file (if present)")
-    parser.add_argument("-s", "--sheets", action="store_true", help="Would you like to ignore multiple sheets?")
+    #parser.add_argument("FileSaver", help="Name the output file you want to process", widget="FileSaver")
+    #parser.add_argument("-o", "--overwrite", action="store_true", help="Overwrite output file (if present)")
+    #parser.add_argument("-s", "--sheets", action="store_true", help="Would you like to ignore multiple sheets?")
 
 
     args = parser.parse_args()
@@ -75,28 +85,41 @@ def combine_files(src_directory):
 #def dedupe():
 
 
-def save_results(dataFile, output,filename):
+def save_results(dataFile, output):
     """ Perform a summary of the data and save the data as an excel file
     """
-    extension = '.xlsx'
-    if filename.lower().endswith('.xlsx'):
-        output_file = os.path.join(output, filename)
-    else:
-        output_file = os.path.join(output, filename+extension)
-
-    writer = pd.ExcelWriter(output_file, engine='xlsxwriter')
-    dataFile.to_excel(writer)
-    writer.save()
-#-------------------------------------------------------------------------------------#
-# Check address  return 4 more dataframes 
-
-
-
-
-
+    # extension = '.xlsx'
+    # if filename.lower().endswith('.xlsx'):
+    #     output_file = os.path.join(output, filename)
+    # else:
+    #     output_file = os.path.join(output, filename+extension)
+    for key, value in output_df.iteritems():
+        output_file = os.path.join(output, key)
+        writer = pd.ExcelWriter(output_file, engine='xlsxwriter')
+        value.to_excel(writer)
+        writer.save()
 
 #-------------------------------------------------------------------------------------#
-# Mail Merge 
+# Check address update 4 dataframes 
+
+def addresscheck(df):
+    for index, row in df.iterrows():
+        addressstring = (unicode(row['Address 1'])+' '+ unicode(row['Address 2'])+' ' + unicode(row['City'])+' ' + unicode(row['State'])+' '+ unicode(row['Zipcode']))
+        addresscheck = usaddress.tag(addressstring)
+        if addresscheck[1] != 'Ambiguous':
+            if addressstring.find('University at Buffalo') != -1:
+                buffadd.loc[len(buffadd)]=df.iloc[index]
+            else:
+                usadd.loc[len(usadd)]= df.iloc[index]
+        else:
+            if addressstring.find("University at Buffalo") != -1:
+                wrongbuff.loc[len(wrongbuff)] = df.iloc[index]
+            else:
+                wrongaddress.loc[len(wrongaddress)] = df.iloc[index]
+
+
+#-------------------------------------------------------------------------------------#
+# Mail Merge methods
 
 def guess_column_names(columnname):
     ''' An attempt to standardize and rename column headers for manipulation later.
@@ -180,6 +203,28 @@ def reorder_columns(dataframe, seq):
     
     return dataframe[cols]
 
+def nameMerge(df):
+    #create
+    #check if nan
+    df1 = df[['First Name','Last Name', 'Fullname' ]]
+    col1 = df1.as_matrix(columns=None);
+    
+    nameList =[]
+    for name in col1:
+        first = str(name[0])
+        last = str(name[1])
+        ful = str(name[2])
+        if first == "nan":
+            first =""
+        if last == "nan":
+            last = ""
+        if ful == "nan":
+            ful= ""
+        full = last +", "+first + ful
+        nameList.append(full)
+
+    df["Fullname"] = nameList
+   
 
 def rename_columns(df):
     # List of New "corrected" column names
@@ -211,7 +256,8 @@ def rename_columns(df):
     
     #Call nameConcate here
     
-    
+    nameMerge(df)
+
     # Create unique versions of Columns to avoid issues with pandas 
     df.columns = list(unique_columns(df.columns))
     #print 'Unique: ',df.columns
@@ -226,19 +272,16 @@ def rename_columns(df):
     
     return df
 
-# def concatdf(dflist):
-#     # takes in list of dataframes and concatenates them all together into one df
-#     alldf = pd.concat(dflist)
-#     alldf = alldf.reset_index(drop=True)
-#     return alldf
-
 # -------------------------------------------------------------------------------#
+# Main 
 
 if __name__ == '__main__':
     conf = parse_args()
     print("Reading files and combining")
     all_df = combine_files(conf.data_directory)
+    print("checking address")
+    addresscheck(all_df)
     print("Saving data")
-    save_results(all_df, conf.output_directory,conf.FileSaver)
+    save_results(all_df, conf.output_directory)
     print("Done")
 
