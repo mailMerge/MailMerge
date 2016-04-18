@@ -5,9 +5,9 @@ import os
 import json
 from fuzzywuzzy import fuzz
 from fuzzywuzzy import process 
+import probablepeople 
 from argparse import ArgumentParser
 from gooey import Gooey, GooeyParser
-
 
 
 ## --- setup dataframes
@@ -19,7 +19,8 @@ wrongbuff = pd.DataFrame(columns=ls)
 output_df = {'buffaloAddress.xlsx':buffadd,'usAddress.xlsx':usadd,'wrongAddress.xlsx':wrongaddress,'wrongBuffaloAddress.xlsx':wrongbuff}
 
 @Gooey(program_name="Mail Merge")
-def parse_args():
+def parse_args(progress_regex=r"^progress: (\d+)%$",
+       disable_stop_button=True):
     """ Use GooeyParser to build up the arguments we will use in our script
     Save the arguments in a default json file so that we can retrieve them
     every time we run the script.
@@ -99,11 +100,11 @@ def save_results(dataFile, output):
         writer.save()
 
 #-------------------------------------------------------------------------------------#
-# Check address  return 4 more dataframes 
+# Check address update 4 dataframes 
 
 def addresscheck(df):
     for index, row in df.iterrows():
-        addressstring = (row[1]+' '+ row[2]+' ' + row[4]+' ' + row[5])
+        addressstring = (unicode(row['Address 1'])+' '+ unicode(row['Address 2'])+' ' + unicode(row['City'])+' ' + unicode(row['State'])+' '+ unicode(row['Zipcode']))
         addresscheck = usaddress.tag(addressstring)
         if addresscheck[1] != 'Ambiguous':
             if addressstring.find('University at Buffalo') != -1:
@@ -118,7 +119,7 @@ def addresscheck(df):
 
 
 #-------------------------------------------------------------------------------------#
-# Mail Merge 
+# Mail Merge methods
 
 def guess_column_names(columnname):
     ''' An attempt to standardize and rename column headers for manipulation later.
@@ -202,6 +203,28 @@ def reorder_columns(dataframe, seq):
     
     return dataframe[cols]
 
+def nameMerge(df):
+    #create
+    #check if nan
+    df1 = df[['First Name','Last Name', 'Fullname' ]]
+    col1 = df1.as_matrix(columns=None);
+    
+    nameList =[]
+    for name in col1:
+        first = str(name[0])
+        last = str(name[1])
+        ful = str(name[2])
+        if first == "nan":
+            first =""
+        if last == "nan":
+            last = ""
+        if ful == "nan":
+            ful= ""
+        full = last +", "+first + ful
+        nameList.append(full)
+
+    df["Fullname"] = nameList
+   
 
 def rename_columns(df):
     # List of New "corrected" column names
@@ -233,7 +256,8 @@ def rename_columns(df):
     
     #Call nameConcate here
     
-    
+    nameMerge(df)
+
     # Create unique versions of Columns to avoid issues with pandas 
     df.columns = list(unique_columns(df.columns))
     #print 'Unique: ',df.columns
@@ -248,13 +272,8 @@ def rename_columns(df):
     
     return df
 
-# def concatdf(dflist):
-#     # takes in list of dataframes and concatenates them all together into one df
-#     alldf = pd.concat(dflist)
-#     alldf = alldf.reset_index(drop=True)
-#     return alldf
-
 # -------------------------------------------------------------------------------#
+# Main 
 
 if __name__ == '__main__':
     conf = parse_args()
