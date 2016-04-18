@@ -16,7 +16,6 @@ buffadd = pd.DataFrame(columns=ls)
 usadd = pd.DataFrame(columns=ls)
 wrongaddress = pd.DataFrame(columns=ls)
 wrongbuff = pd.DataFrame(columns=ls)
-
 output_df = {'buffaloAddress.xlsx':buffadd,'usAddress.xlsx':usadd,'wrongAddress.xlsx':wrongaddress,'wrongBuffaloAddress.xlsx':wrongbuff}
 
 @Gooey(program_name="Mail Merge")
@@ -261,6 +260,8 @@ if __name__ == '__main__':
     conf = parse_args()
     print("Reading files and combining")
     all_df = combine_files(conf.data_directory)
+    print("checking address")
+    addresscheck(all_df)
     print("Saving data")
     save_results(all_df, conf.output_directory)
     print("Done")
