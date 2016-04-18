@@ -9,6 +9,16 @@ from argparse import ArgumentParser
 from gooey import Gooey, GooeyParser
 
 
+
+## --- setup dataframes
+ls = ('First Name','Last Name','Fullname','Title','Company','Department','Address 1','Address 2','City','State','Zipcode','Country')
+buffadd = pd.DataFrame(columns=ls)
+usadd = pd.DataFrame(columns=ls)
+wrongaddress = pd.DataFrame(columns=ls)
+wrongbuff = pd.DataFrame(columns=ls)
+
+output_df = {'buffaloAddress.xlsx':buffadd,'usAddress.xlsx':usadd,'wrongAddress.xlsx':wrongaddress,'wrongBuffaloAddress.xlsx':wrongbuff}
+
 @Gooey(program_name="Mail Merge")
 def parse_args():
     """ Use GooeyParser to build up the arguments we will use in our script
@@ -38,9 +48,9 @@ def parse_args():
                         default=stored_args.get('output_directory'),
                         help="Output directory to save merged files")
 
-    parser.add_argument("FileSaver", help="Name the output file you want to process", widget="FileSaver")
-    parser.add_argument("-o", "--overwrite", action="store_true", help="Overwrite output file (if present)")
-    parser.add_argument("-s", "--sheets", action="store_true", help="Would you like to ignore multiple sheets?")
+    #parser.add_argument("FileSaver", help="Name the output file you want to process", widget="FileSaver")
+    #parser.add_argument("-o", "--overwrite", action="store_true", help="Overwrite output file (if present)")
+    #parser.add_argument("-s", "--sheets", action="store_true", help="Would you like to ignore multiple sheets?")
 
 
     args = parser.parse_args()
@@ -75,24 +85,37 @@ def combine_files(src_directory):
 #def dedupe():
 
 
-def save_results(dataFile, output,filename):
+def save_results(dataFile, output):
     """ Perform a summary of the data and save the data as an excel file
     """
-    extension = '.xlsx'
-    if filename.lower().endswith('.xlsx'):
-        output_file = os.path.join(output, filename)
-    else:
-        output_file = os.path.join(output, filename+extension)
+    # extension = '.xlsx'
+    # if filename.lower().endswith('.xlsx'):
+    #     output_file = os.path.join(output, filename)
+    # else:
+    #     output_file = os.path.join(output, filename+extension)
+    for key, value in output_df.iteritems():
+        output_file = os.path.join(output, key)
+        writer = pd.ExcelWriter(output_file, engine='xlsxwriter')
+        value.to_excel(writer)
+        writer.save()
 
-    writer = pd.ExcelWriter(output_file, engine='xlsxwriter')
-    dataFile.to_excel(writer)
-    writer.save()
 #-------------------------------------------------------------------------------------#
 # Check address  return 4 more dataframes 
 
-
-
-
+def addresscheck(df):
+    for index, row in df.iterrows():
+        addressstring = (row[1]+' '+ row[2]+' ' + row[4]+' ' + row[5])
+        addresscheck = usaddress.tag(addressstring)
+        if addresscheck[1] != 'Ambiguous':
+            if addressstring.find('University at Buffalo') != -1:
+                buffadd.loc[len(buffadd)]=df.iloc[index]
+            else:
+                usadd.loc[len(usadd)]= df.iloc[index]
+        else:
+            if addressstring.find("University at Buffalo") != -1:
+                wrongbuff.loc[len(wrongbuff)] = df.iloc[index]
+            else:
+                wrongaddress.loc[len(wrongaddress)] = df.iloc[index]
 
 
 #-------------------------------------------------------------------------------------#
@@ -239,6 +262,6 @@ if __name__ == '__main__':
     print("Reading files and combining")
     all_df = combine_files(conf.data_directory)
     print("Saving data")
-    save_results(all_df, conf.output_directory,conf.FileSaver)
+    save_results(all_df, conf.output_directory)
     print("Done")
 
