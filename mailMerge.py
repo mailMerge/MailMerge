@@ -10,13 +10,6 @@ from argparse import ArgumentParser
 from gooey import Gooey, GooeyParser
 
 
-## --- setup dataframes
-ls = ('First Name','Last Name','Fullname','Title','Company','Department','Address 1','Address 2','City','State','Zipcode','Country')
-buffadd = pd.DataFrame(columns=ls)
-usadd = pd.DataFrame(columns=ls)
-wrongaddress = pd.DataFrame(columns=ls)
-wrongbuff = pd.DataFrame(columns=ls)
-output_df = {'buffaloAddress.xlsx':buffadd,'usAddress.xlsx':usadd,'wrongAddress.xlsx':wrongaddress,'wrongBuffaloAddress.xlsx':wrongbuff}
 
 @Gooey(program_name="Mail Merge")
 def parse_args(progress_regex=r"^progress: (\d+)%$",
@@ -52,14 +45,12 @@ def parse_args(progress_regex=r"^progress: (\d+)%$",
     #parser.add_argument("-o", "--overwrite", action="store_true", help="Overwrite output file (if present)")
     #parser.add_argument("-s", "--sheets", action="store_true", help="Would you like to ignore multiple sheets?")
 
-
     args = parser.parse_args()
     # Store the values of the arguments so we have them next time we run
     with open(args_file, 'w') as data_file:
         # Using vars(args) returns the data as a dictionary
         json.dump(vars(args), data_file)
     return args
-
 
 
 def combine_files(src_directory):
@@ -85,7 +76,7 @@ def combine_files(src_directory):
 #def dedupe():
 
 
-def save_results(dataFile, output):
+def save_results(output_df, output):
     """ Perform a summary of the data and save the data as an excel file
     """
     # extension = '.xlsx'
@@ -273,15 +264,26 @@ def rename_columns(df):
     return df
 
 # -------------------------------------------------------------------------------#
+nonbuffered_stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)
+sys.stdout = nonbuffered_stdout
+
 # Main 
 
 if __name__ == '__main__':
     conf = parse_args()
+    ## --- setup dataframes
+    ls = ('First Name','Last Name','Fullname','Title','Company','Department','Address 1','Address 2','City','State','Zipcode','Country')
+    buffadd = pd.DataFrame(columns=ls)
+    usadd = pd.DataFrame(columns=ls)
+    wrongaddress = pd.DataFrame(columns=ls)
+    wrongbuff = pd.DataFrame(columns=ls)
+    output_df = {'buffaloAddress.xlsx':buffadd,'usAddress.xlsx':usadd,'wrongAddress.xlsx':wrongaddress,'wrongBuffaloAddress.xlsx':wrongbuff}
+
     print("Reading files and combining")
     all_df = combine_files(conf.data_directory)
     print("checking address")
     addresscheck(all_df)
     print("Saving data")
-    save_results(all_df, conf.output_directory)
+    save_results(output_df, conf.output_directory)
     print("Done")
 
