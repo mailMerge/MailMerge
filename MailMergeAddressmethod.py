@@ -32,18 +32,11 @@ def addresscheck(df):
             wrongaddress.loc[len(wrongaddress)] = df.iloc[index]
 
         if addresscheck[1] != 'Ambiguous':
-            #We will have check all buildings that ub has ie clemens, davis etc... as oppossed to just checking for uniersity at buffalo
-            if addressstring.find('University at Buffalo') != -1:
-                buffadd.loc[len(buffadd)]=df.iloc[index]
-
-            else:
+            if addressstring.find('14261') == -1 and addressstring.find('14260') == -1 and addressstring.find('14214') == -1:
                 usadd.loc[len(usadd)]= df.iloc[index]
 
         else:
-            if addressstring.find("University at Buffalo") != -1:
-                wrongbuff.loc[len(wrongbuff)] = df.iloc[index]
-
-            else:
+            if addressstring.find('14261') == -1 and addressstring.find('14260') == -1 and addressstring.find('14214') == -1:
                 wrongaddress.loc[len(wrongaddress)] = df.iloc[index]
 
 
