@@ -91,6 +91,8 @@ def save_results(output_df, output):
         writer.save()
 
 #-------------------------------------------------------------------------------------#
+# Mail Merge methods
+#-------------------------------------------------------------------------------------#
 # Check address update 4 dataframes 
 
 def addresscheck(df):
@@ -108,9 +110,6 @@ def addresscheck(df):
             else:
                 wrongaddress.loc[len(wrongaddress)] = df.iloc[index]
 
-
-#-------------------------------------------------------------------------------------#
-# Mail Merge methods
 
 def guess_column_names(columnname):
     ''' An attempt to standardize and rename column headers for manipulation later.
