@@ -6,9 +6,9 @@ import json
 from fuzzywuzzy import fuzz
 from fuzzywuzzy import process 
 import probablepeople 
+import usaddress
 from argparse import ArgumentParser
 from gooey import Gooey, GooeyParser
-
 
 
 @Gooey(program_name="Mail Merge")
@@ -58,12 +58,10 @@ def combine_files(src_directory):
     combined DataFrame
     """
     all_data = pd.DataFrame()
-
     filelist = []
     fileTypes = ['*.xls', '*.xlsx','*.xlsm','*XLSX']
     for ftype in fileTypes:
-        filelist.extend(glob.glob(src_directory+ftype))
-
+        filelist.extend(glob.glob(src_directory+'/'+ftype))
     for f in filelist:
         for sheet in pd.ExcelFile(f).sheet_names:
             df = pd.read_excel(f,sheet)
@@ -71,12 +69,14 @@ def combine_files(src_directory):
             all_data = all_data.append(df, ignore_index=True)
 
     all_data.reset_index(drop=True)
+    print 'alldata',all_data[10:100]
     return all_data
 
-#def dedupe():
+def dedup(df):
+    df.drop_duplicates(subset=['Address 1', 'Address 2', 'City', 'State', 'Zipcode'])
+    
 
-
-def save_results(output_df, output):
+def save_results(output):
     """ Perform a summary of the data and save the data as an excel file
     """
     # extension = '.xlsx'
@@ -91,24 +91,30 @@ def save_results(output_df, output):
         writer.save()
 
 #-------------------------------------------------------------------------------------#
-# Mail Merge methods
-#-------------------------------------------------------------------------------------#
 # Check address update 4 dataframes 
 
-def addresscheck(df):
+def addresscheck(df,usadd,wrongaddress):
     for index, row in df.iterrows():
-        addressstring = (unicode(row['Address 1'])+' '+ unicode(row['Address 2'])+' ' + unicode(row['City'])+' ' + unicode(row['State'])+' '+ unicode(row['Zipcode']))
-        addresscheck = usaddress.tag(addressstring)
+        addressstring = (unicode(row['Address 1'])+' '+ unicode(row['Address 2'])+' ' + unicode(row['City'])+' ' + unicode(row['State']) + ' ' + unicode(row['Zipcode']))
+        try:
+            addresscheck = usaddress.tag(addressstring)
+        except usaddress.RepeatedLabelError:
+            wrongaddress.loc[len(wrongaddress)] = df.iloc[index]
+
         if addresscheck[1] != 'Ambiguous':
-            if addressstring.find('University at Buffalo') != -1:
-                buffadd.loc[len(buffadd)]=df.iloc[index]
-            else:
+            if addressstring.find('14261') == -1 and addressstring.find('14260') == -1 and addressstring.find('Clement') == -1 and addressstring.find('Goodyear') == -1:
                 usadd.loc[len(usadd)]= df.iloc[index]
+
         else:
-            if addressstring.find("University at Buffalo") != -1:
-                wrongbuff.loc[len(wrongbuff)] = df.iloc[index]
-            else:
+            if addressstring.find('14261') == -1 and addressstring.find('14260') == -1 and addressstring.find('Clement') == -1 and addressstring.find('Goodyear') == -1:
                 wrongaddress.loc[len(wrongaddress)] = df.iloc[index]
+
+
+#-------------------------------------------------------------------------------------#
+# Mail Merge methods
+
+
+
 
 
 def guess_column_names(columnname):
@@ -243,10 +249,10 @@ def rename_columns(df):
                       }, inplace=True)
         
     #print 'Rename: ',df.columns
-    
+
     #Call nameConcate here
     
-    nameMerge(df)
+    #nameMerge(df)
 
     # Create unique versions of Columns to avoid issues with pandas 
     df.columns = list(unique_columns(df.columns))
@@ -263,26 +269,23 @@ def rename_columns(df):
     return df
 
 # -------------------------------------------------------------------------------#
-nonbuffered_stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)
-sys.stdout = nonbuffered_stdout
-
 # Main 
 
 if __name__ == '__main__':
     conf = parse_args()
     ## --- setup dataframes
     ls = ('First Name','Last Name','Fullname','Title','Company','Department','Address 1','Address 2','City','State','Zipcode','Country')
-    buffadd = pd.DataFrame(columns=ls)
     usadd = pd.DataFrame(columns=ls)
     wrongaddress = pd.DataFrame(columns=ls)
-    wrongbuff = pd.DataFrame(columns=ls)
-    output_df = {'buffaloAddress.xlsx':buffadd,'usAddress.xlsx':usadd,'wrongAddress.xlsx':wrongaddress,'wrongBuffaloAddress.xlsx':wrongbuff}
-
+    output_df = {'usAddress.xlsx':usadd,'wrongAddress.xlsx':wrongaddress}
     print("Reading files and combining")
     all_df = combine_files(conf.data_directory)
+    print("dropping duplicate address")
+    all_df = all_df.drop_duplicates(subset=['Address 1', 'Address 2', 'City', 'State', 'Zipcode'])
     print("checking address")
-    addresscheck(all_df)
+    addresscheck(all_df,usadd,wrongaddress)
     print("Saving data")
-    save_results(output_df, conf.output_directory)
+    save_results(conf.output_directory)
     print("Done")
+
 
